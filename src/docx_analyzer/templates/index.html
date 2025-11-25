@@ -5,197 +5,92 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DOCX Analyzer</title>
-  <style>
-    :root {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: #0f172a;
-      background: #f8fafc;
-    }
-
-    body {
-      margin: 0;
-      padding: 24px;
-    }
-
-    .container {
-      max-width: 1080px;
-      margin: 0 auto;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-    }
-
-    h1 {
-      margin-top: 0;
-    }
-
-    form {
-      display: grid;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    label {
-      font-weight: 600;
-    }
-
-    input[type="file"],
-    input[type="text"],
-    textarea,
-    select {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font: inherit;
-      background: #fff;
-    }
-
-    textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    button {
-      justify-self: start;
-      padding: 10px 16px;
-      border: none;
-      border-radius: 8px;
-      background: #0ea5e9;
-      color: #fff;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .result-section {
-      margin-bottom: 24px;
-    }
-
-    pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: #0f172a;
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 10px;
-      font-size: 14px;
-      overflow: auto;
-      max-height: 600px;
-    }
-
-    .error {
-      color: #b91c1c;
-      background: #fef2f2;
-      padding: 12px;
-      border: 1px solid #fecdd3;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-
-    .notice {
-      color: #334155;
-      background: #f8fafc;
-      padding: 10px 12px;
-      border: 1px dashed #cbd5e1;
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-
-    .markdown-body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-      font-size: 16px;
-      line-height: 1.5;
-      word-wrap: break-word;
-    }
-
-    .markdown-body h1,
-    .markdown-body h2,
-    .markdown-body h3 {
-      margin-top: 24px;
-      margin-bottom: 16px;
-      font-weight: 600;
-      line-height: 1.25;
-    }
-
-    .markdown-body h1 {
-      font-size: 2em;
-      border-bottom: 1px solid #eaecef;
-      padding-bottom: 0.3em;
-    }
-
-    .markdown-body h2 {
-      font-size: 1.5em;
-      border-bottom: 1px solid #eaecef;
-      padding-bottom: 0.3em;
-    }
-
-    .markdown-body h3 {
-      font-size: 1.25em;
-    }
-
-    .markdown-body ul,
-    .markdown-body ol {
-      padding-left: 2em;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    .markdown-body li {
-      margin-top: 0.25em;
-    }
-
-    .markdown-body p {
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    .markdown-body code {
-      padding: 0.2em 0.4em;
-      margin: 0;
-      font-size: 85%;
-      background-color: rgba(27, 31, 35, 0.05);
-      border-radius: 3px;
-    }
-
-    .markdown-body pre {
-      padding: 16px;
-      overflow: auto;
-      font-size: 85%;
-      line-height: 1.45;
-      background-color: #f6f8fa;
-      border-radius: 3px;
-    }
-
-    .markdown-body pre code {
-      background-color: transparent;
-      padding: 0;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 
 <body>
   <div class="container">
     <h1>DOCX Analyzer</h1>
-    <p class="notice">DOCX をアップロードすると、段落解析と LLM レビューを実行します。</p>
+    <p class="notice">
+      📄 DOCX をアップロードすると、段落解析と LLM レビューを実行します。<br>
+      対応ファイル: .docx（最大10MB）
+    </p>
+
     {% if error %}
-    <div class="error">Error: {{ error }}</div>
-    {% endif %}
-    <div id="loading" class="notice" style="display: none; background: #e0f2fe; border-color: #7dd3fc; color: #0369a1;">
-      Parsing and reviewing... This may take a moment.
+    <div class="error">
+      <div class="error-title">❌ エラーが発生しました</div>
+      <p>{{ error }}</p>
+
+      {% if error_type == 'file_too_large' %}
+      <div class="error-solutions">
+        <strong>対処方法:</strong>
+        <ul>
+          <li>ファイルサイズを10MB以下に削減してください</li>
+          <li>不要な画像や埋め込みオブジェクトを削除してください</li>
+          <li>ファイルを複数に分割することを検討してください</li>
+        </ul>
+      </div>
+      {% elif error_type == 'invalid_file_type' %}
+      <div class="error-solutions">
+        <strong>対処方法:</strong>
+        <ul>
+          <li>ファイルの拡張子が .docx であることを確認してください</li>
+          <li>.doc ファイルの場合は、Wordで開いて .docx 形式で保存し直してください</li>
+        </ul>
+      </div>
+      {% elif error_type == 'parse_error' %}
+      <div class="error-solutions">
+        <strong>対処方法:</strong>
+        <ul>
+          <li>ファイルをWordで開いて再保存してください</li>
+          <li>別のDOCXファイルで試してください</li>
+          <li>ファイルが破損していないか確認してください</li>
+        </ul>
+      </div>
+      {% elif error_type == 'llm_error' %}
+      <div class="error-solutions">
+        <strong>対処方法:</strong>
+        <ul>
+          <li>GOOGLE_API_KEY が正しく設定されているか確認してください</li>
+          <li>APIキーの利用制限に達していないか確認してください</li>
+          <li>しばらく時間をおいて再試行してください</li>
+        </ul>
+      </div>
+      {% endif %}
+
+      <button type="button" onclick="window.location.reload()" style="margin-top: 12px;">
+        🔄 もう一度試す
+      </button>
     </div>
-    <form action="/analyze" method="post" enctype="multipart/form-data"
-      onsubmit="document.getElementById('loading').style.display='block';">
+    {% endif %}
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <div class="loading-text">処理中...</div>
+        <div class="loading-subtext">
+          DOCXファイルを解析し、LLMレビューを実行しています。<br>
+          しばらくお待ちください。
+        </div>
+      </div>
+    </div>
+
+    <form action="/analyze" method="post" enctype="multipart/form-data" id="analyzeForm">
       <div>
         <label for="file">DOCX ファイル</label>
-        <input id="file" name="file" type="file" accept=".docx" required />
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-icon">📄</div>
+          <div class="drop-zone-text">ファイルをドラッグ&ドロップ</div>
+          <div class="drop-zone-text">または</div>
+          <input id="file" name="file" type="file" accept=".docx" required style="display: none;" />
+          <button type="button" onclick="document.getElementById('file').click()" class="secondary">
+            ファイルを選択
+          </button>
+        </div>
+        <div id="fileInfo" class="file-info"></div>
       </div>
+
       <div>
         <label for="model">モデル</label>
         <select id="model" name="model">
@@ -207,28 +102,75 @@
             flash</option>
         </select>
       </div>
-      <div>
-        <label for="prompt">レビュー指示（任意）</label>
+
+      <div class="template-group">
+        <label for="template">レビュータイプ</label>
+        <select id="template" name="template">
+          <option value="default" {% if default_template=='default' %}selected{% endif %}>デフォルト（契約レビュー）</option>
+          <option value="risk_focus" {% if default_template=='risk_focus' %}selected{% endif %}>リスク重点レビュー</option>
+          <option value="change_summary" {% if default_template=='change_summary' %}selected{% endif %}>変更履歴サマリー
+          </option>
+          <option value="comment_review" {% if default_template=='comment_review' %}selected{% endif %}>コメント対応チェック
+          </option>
+          <option value="custom" {% if default_template=='custom' %}selected{% endif %}>カスタム</option>
+        </select>
+        <div class="template-info" id="templateInfo">
+          リスクのある条項、追跡変更、コメントを総合的にレビューします
+        </div>
+      </div>
+
+      <div class="custom-prompt-area" id="customPromptArea">
+        <label for="prompt">カスタムレビュー指示</label>
         <textarea id="prompt" name="prompt" style="min-height: 150px;">{{ default_prompt or "" }}</textarea>
       </div>
-      <button type="submit">解析 & レビュー</button>
+
+      <button type="submit">🔍 解析 & レビュー</button>
     </form>
 
     {% if result %}
     <div class="result-section">
+      <h3>📊 処理結果</h3>
+      <div style="margin-bottom: 16px;">
+        <span class="info-badge">📁 {{ result.filename }}</span>
+        <span class="info-badge">📏 {{ result.file_size }} KB</span>
+        <span class="info-badge">⏱️ {{ result.processing_time }} 秒</span>
+        <span class="info-badge">🤖 {{ result.model }}</span>
+      </div>
+    </div>
+
+    <div class="result-section">
       <details>
         <summary style="cursor: pointer; font-weight: bold; margin-bottom: 8px;">解析結果 (JSON)</summary>
-        <pre>{{ result.analysis_json }}</pre>
+        <div class="result-actions">
+          <button type="button" class="secondary" onclick="copyToClipboard('analysisJson')">
+            📋 JSONをコピー
+          </button>
+          <button type="button" class="secondary" onclick="downloadJson()">
+            💾 JSONをダウンロード
+          </button>
+        </div>
+        <pre id="analysisJson">{{ result.analysis_json }}</pre>
       </details>
     </div>
+
     <div class="result-section">
-      <h3>LLM レビュー ({{ result.model }})</h3>
-      <div class="markdown-body">
+      <h3>✨ LLM レビュー</h3>
+      <div class="result-actions">
+        <button type="button" class="secondary" onclick="copyToClipboard('reviewContent')">
+          📋 レビューをコピー
+        </button>
+        <button type="button" class="secondary" onclick="downloadMarkdown()">
+          💾 Markdownをダウンロード
+        </button>
+      </div>
+      <div class="markdown-body" id="reviewContent">
         {{ result.review_html | safe }}
       </div>
     </div>
     {% endif %}
   </div>
+
+  <script src="/static/js/main.js"></script>
 </body>
 
 </html>

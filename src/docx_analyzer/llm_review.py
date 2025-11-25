@@ -200,6 +200,53 @@ DEFAULT_USER_INSTRUCTION = """\
 - 短く行動可能な箇条書きでまとめること
 """
 
+# Prompt templates for different review types
+PROMPT_TEMPLATES = {
+    "default": DEFAULT_USER_INSTRUCTION,
+    "risk_focus": """\
+以下のレビュー指示に従ってください：
+
+- **リスク重点レビュー**: 契約上のリスクを最優先で評価
+- 損害賠償、解除条件、秘密保持、知的財産権などの重要条項を重点的に分析
+- リスクレベル（高/中/低）を明示
+- 各リスクに対する具体的な軽減策を提案
+- 段落 index を参照して特定しやすくする
+- 優先度順に箇条書きでまとめること
+""",
+    "change_summary": """\
+以下のレビュー指示に従ってください：
+
+- **変更履歴サマリー**: 追跡変更の内容を要約
+- 追加（add）、削除（delete）、移動（move）の各変更を分類
+- 各変更の影響度を評価（重要/通常/軽微）
+- 変更の受け入れ/却下の推奨と理由を明確に述べる
+- 変更者（author）と日時（date）を含めて記載
+- 段落 index を参照して特定しやすくする
+""",
+    "comment_review": """\
+以下のレビュー指示に従ってください：
+
+- **コメント対応チェック**: インラインコメントへの対応を重点的に確認
+- 各コメント（comment_id）に対する具体的な回答や対応案を提示
+- コメントで指摘された問題点の妥当性を評価
+- 対応の優先度を明示（必須/推奨/任意）
+- コメント対象の段落 index と comment_id を参照
+- 対応が必要なコメントを優先順に箇条書きでまとめること
+""",
+}
+
+
+def get_prompt_template(template_name: str) -> str:
+    """Get a prompt template by name.
+    
+    Args:
+        template_name: Name of the template (default, risk_focus, change_summary, comment_review)
+        
+    Returns:
+        The prompt template string, or DEFAULT_USER_INSTRUCTION if not found
+    """
+    return PROMPT_TEMPLATES.get(template_name, DEFAULT_USER_INSTRUCTION)
+
 
 def build_llm_payload(analysis: DocumentAnalysis, user_instruction: str) -> Iterable[Dict]:
     """Compose a payload suitable for LLM's generate_content."""
