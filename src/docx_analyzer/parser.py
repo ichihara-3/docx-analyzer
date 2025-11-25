@@ -86,7 +86,7 @@ class DocxAnalyzer:
     def __init__(self, path: str):
         self.path = str(path)
         self._zip = zipfile.ZipFile(self.path)
-        self.comments: Dict[str, str] = self._load_comments()
+        self.comments: Dict[str, Dict[str, Optional[str]]] = self._load_comments()
 
     def analyze(self) -> DocumentAnalysis:
         document_xml = self._zip.read("word/document.xml")
@@ -98,17 +98,21 @@ class DocxAnalyzer:
 
     # --- internal parsing helpers -------------------------------------------------
 
-    def _load_comments(self) -> Dict[str, str]:
-        """Return mapping of comment id -> comment text."""
+    def _load_comments(self) -> Dict[str, Dict[str, Optional[str]]]:
+        """Return mapping of comment id -> {text, date}."""
         try:
             data = self._zip.read("word/comments.xml")
         except KeyError:
             return {}
         root = etree.fromstring(data)
-        comments: Dict[str, str] = {}
+        comments: Dict[str, Dict[str, Optional[str]]] = {}
         for comment in root.xpath(".//w:comment", namespaces=NS):
             cid = comment.get(f"{{{NS['w']}}}id")
-            comments[cid] = _text_in_element(comment)
+            date = comment.get(f"{{{NS['w']}}}date")
+            comments[cid] = {
+                "text": _text_in_element(comment),
+                "date": date,
+            }
         return comments
 
     def _list_info(self, para: etree._Element) -> ListInfo:
@@ -126,11 +130,13 @@ class DocxAnalyzer:
 
         def flush_comment(id_: str):
             text = "".join(active_comment_buffers.get(id_, []))
+            comment_data = self.comments.get(id_, {})
             event = ChangeEvent(
                 kind="comment",
                 text=text,
                 comment_id=id_,
-                comment_text=self.comments.get(id_),
+                comment_text=comment_data.get("text"),
+                date=comment_data.get("date"),
             )
             events.append(event)
             active_comment_buffers.pop(id_, None)
@@ -218,6 +224,11 @@ class DocxAnalyzer:
         # flush any unclosed comment ranges
         for cid in list(active_comment_buffers.keys()):
             flush_comment(cid)
+        
+        # Sort events by date. Events without date come first (or last? let's stick to stable sort)
+        # Using empty string for None ensures they are grouped together.
+        events.sort(key=lambda x: x.date or "")
+
         text_value = "".join(current_text).strip()
         return ParagraphAnalysis(
             index=idx,

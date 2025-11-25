@@ -1,6 +1,6 @@
-from __future__ import annotations
-
+import json
 import tempfile
+import markdown
 from pathlib import Path
 from typing import Optional
 
@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .llm_review import LLMReviewer
+from .llm_review import DEFAULT_USER_INSTRUCTION, LLMReviewer
 from .parser import load_analysis
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -32,7 +32,7 @@ async def index(request: Request):
             "result": None,
             "error": None,
             "default_model": "gemini-2.5-flash",
-            "default_prompt": None,
+            "default_prompt": DEFAULT_USER_INSTRUCTION,
         },
     )
 
@@ -53,10 +53,12 @@ async def analyze(
             tmp.flush()
             analysis = load_analysis(tmp.name)
         reviewer = LLMReviewer(model=model)
-        review_text = reviewer.review(analysis, prompt=prompt)
+        review_text = reviewer.review(analysis, user_instruction=prompt)
         result = {
             "analysis": analysis.to_dict(),
+            "analysis_json": json.dumps(analysis.to_dict(), ensure_ascii=False, indent=2),
             "review": review_text,
+            "review_html": markdown.markdown(review_text),
             "model": model,
         }
     except Exception as exc:  # pragma: no cover - surface to UI
