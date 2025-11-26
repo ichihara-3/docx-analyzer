@@ -1,25 +1,44 @@
 # docx-analyzer
 
-DOCX を解析して、本文・段落構造・追跡履歴・コメントを JSON 化し、LLM（Gemini）に渡せる形にするための実験リポジトリです。
+DOCX を解析して、本文・段落構造・追跡履歴・コメントを JSON 化し、LLM（Gemini / OpenAI）に渡せる形にするための実験リポジトリです。
+Web UI を使って、ブラウザ上で解析結果の確認や LLM レビュー、コメント付き DOCX のダウンロードが可能です。
 
 ## セットアップ
 
-```
+```bash
 uv sync
 ```
 
-環境変数 `GOOGLE_API_KEY` を設定すると LLM レビューを実行できます。
+LLM レビューを実行するには、使用するモデルに応じて環境変数を設定してください。
 
-```
+```bash
 cp .env.example .env
+# Gemini を使う場合
 echo "GOOGLE_API_KEY=xxxx" >> .env
 ```
 
 ## 使い方
 
-### 解析のみ
+### Web UI（推奨）
 
+ブラウザで直感的に操作できます。
+
+```bash
+uv run docx-web
 ```
+
+`http://127.0.0.1:8000` にアクセスしてください。
+
+**機能:**
+- **解析 & レビュー**: DOCX をアップロードして、解析結果と LLM によるレビューを表示します。
+- **コメント埋め込み**: レビュー結果を元の DOCX にコメントとして埋め込み、ダウンロードできます。
+- **モデル選択**: `gemini-2.5-flash`, `gpt-4o` など、複数のモデルを切り替えて試せます。
+
+### CLI（コマンドライン）
+
+#### 解析のみ
+
+```bash
 uv run docx-analyze sample.docx
 ```
 
@@ -43,14 +62,14 @@ uv run docx-analyze sample.docx
 }
 ```
 
-### 解析＋Gemini でのレビュー
+#### 解析＋LLM レビュー
 
-```
+```bash
 uv run docx-analyze sample.docx --review --prompt prompt.txt
 ```
 
 - `--prompt` でカスタムプロンプトを渡せます（省略時は日本語の契約レビュー用プロンプトで応答）。
-- `--model` で `gemini-1.5-pro-002` など別モデルも指定できます。
+- `--model` でモデルを指定できます（例: `gemini-1.5-pro`, `gpt-4o`）。
 
 ## 実装メモ
 

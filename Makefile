@@ -4,7 +4,7 @@ install:
 	uv sync
 
 dev:
-	uv run uvicorn docx_analyzer.web:app --reload
+	uv run docx-web
 
 cli:
 	uv run docx-analyze --help

@@ -22,3 +22,4 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 docx-analyze = "docx_analyzer.cli:main"
+docx-web = "docx_analyzer.web:main"

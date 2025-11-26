@@ -330,3 +330,11 @@ async def api_download_commented(
             # Only clean up if we didn't successfully return FileResponse
             # This is a bit tricky - we'll rely on OS cleanup for now
             pass
+
+def main():
+    import uvicorn
+    uvicorn.run("docx_analyzer.web:app", host="127.0.0.1", port=8000, reload=True)
+
+
+if __name__ == "__main__":
+    main()
