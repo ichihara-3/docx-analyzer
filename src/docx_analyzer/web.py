@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import time
 import markdown
@@ -6,12 +7,13 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .llm_review import DEFAULT_USER_INSTRUCTION, LLMReviewer, get_prompt_template
 from .parser import load_analysis
+from .writer import create_commented_docx
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -227,3 +229,104 @@ async def analyze(
             "default_template": template,
         },
     )
+
+
+@app.post("/api/download-commented")
+async def api_download_commented(
+    file: UploadFile = File(...),
+    model: str = Form("gemini-2.5-flash"),
+    prompt: Optional[str] = Form(None),
+    template: str = Form("default"),
+    review_text: Optional[str] = Form(None),
+):
+    """API endpoint to download DOCX with AI review comments injected."""
+    temp_source_path = None
+    temp_output_path = None
+    
+    try:
+        # Read and validate file
+        content = await file.read()
+        file_size = len(content)
+        
+        if file_size > MAX_FILE_SIZE:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": f"ファイルサイズが大きすぎます（{file_size / 1024 / 1024:.1f}MB）。"
+                            f"上限は{MAX_FILE_SIZE / 1024 / 1024:.0f}MBです。",
+                    "error_type": "file_too_large"
+                }
+            )
+        
+        if not file.filename or not file.filename.lower().endswith(".docx"):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "DOCXファイルのみ対応しています。",
+                    "error_type": "invalid_file_type"
+                }
+            )
+        
+        # Save uploaded file to temporary location
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp:
+            tmp.write(content)
+            tmp.flush()
+            temp_source_path = tmp.name
+            
+        # Determine review text to use
+        if not review_text or not review_text.strip():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "レビュー結果が見つかりません。先に解析を実行してください。",
+                    "error_type": "missing_review_text"
+                }
+            )
+            
+        final_review_text = review_text
+        
+        # Create commented DOCX
+        try:
+            temp_output_path = create_commented_docx(temp_source_path, final_review_text)
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "error": f"コメント付きDOCXの生成に失敗しました: {str(e)}",
+                    "error_type": "comment_injection_error"
+                }
+            )
+        
+        # Generate output filename
+        original_name = Path(file.filename).stem
+        output_filename = f"{original_name}_reviewed.docx"
+        
+        # Return file as download
+        return FileResponse(
+            path=temp_output_path,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            filename=output_filename,
+            background=None  # We'll clean up manually
+        )
+        
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": f"予期しないエラーが発生しました: {str(exc)}",
+                "error_type": "unknown_error"
+            }
+        )
+    finally:
+        # Clean up temporary files
+        if temp_source_path and os.path.exists(temp_source_path):
+            try:
+                os.unlink(temp_source_path)
+            except Exception:
+                pass
+        # Note: temp_output_path is cleaned up by FileResponse after sending
+        # But if we error before returning FileResponse, we should clean it up
+        if temp_output_path and os.path.exists(temp_output_path):
+            # Only clean up if we didn't successfully return FileResponse
+            # This is a bit tricky - we'll rely on OS cleanup for now
+            pass

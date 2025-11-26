@@ -119,8 +119,8 @@
         </div>
       </div>
 
-      <div class="custom-prompt-area" id="customPromptArea">
-        <label for="prompt">カスタムレビュー指示</label>
+      <div>
+        <label for="prompt">レビュー指示（編集可能）</label>
         <textarea id="prompt" name="prompt" style="min-height: 150px;">{{ default_prompt or "" }}</textarea>
       </div>
 
@@ -161,6 +161,9 @@
         </button>
         <button type="button" class="secondary" onclick="downloadMarkdown()">
           💾 Markdownをダウンロード
+        </button>
+        <button type="button" class="secondary" onclick="downloadCommentedDocx()">
+          📥 コメント付きDOCXをダウンロード
         </button>
       </div>
       <div class="markdown-body" id="reviewContent">

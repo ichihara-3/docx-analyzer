@@ -272,20 +272,6 @@ pre {
   margin-top: 4px;
 }
 
-/* Custom prompt toggle */
-.custom-prompt-toggle {
-  margin-top: 8px;
-}
-
-.custom-prompt-area {
-  display: none;
-  margin-top: 12px;
-}
-
-.custom-prompt-area.visible {
-  display: block;
-}
-
 /* Result actions */
 .result-actions {
   margin-bottom: 12px;
